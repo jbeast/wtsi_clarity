@@ -6,6 +6,8 @@ use Carp;
 use wtsi_clarity::mq::message;
 use wtsi_clarity::mq::mapper;
 
+our $VERSION = '0.0';
+
 has 'mapper' => (
   is        => 'ro',
   isa       => 'wtsi_clarity::mq::mapper',
