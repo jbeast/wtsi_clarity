@@ -2,8 +2,25 @@ package wtsi_clarity::util::textfile;
 
 use Moose;
 use Carp;
+use File::Temp;
+
+use WTSI::NPG::iRODS;
 
 our $VERSION = '0.0';
+
+has '_irods' => (
+  is      => 'ro',
+  isa     => 'WTSI::NPG::iRODS',
+  lazy    => 1,
+  builder => '_build__irods',
+);
+
+has '_irods_path' => (
+  is      => 'ro',
+  isa     => 'Str',
+  lazy    => 1,
+  builder => '_build__irods_path',
+);
 
 has 'content' => (
   is => 'rw',
@@ -25,6 +42,30 @@ sub saveas {
   return $path;
 };
 
+sub save_to_irods {
+  my ($self, $file_name) = @_;
+
+  my $file_path = $self->saveas(join '/', File::Temp->new(), $file_name);
+  my $rods_path = join '/', $self->_irods_path, $file_name;
+
+  if (!$self->_irods->list_object($rods_path)) {
+
+    $self->_irods->add_object($file_path, $rods_path);
+    $self->_irods->add_object_avu($rods_path, 'a', 'b', 'c' ); # Not sure what to put here yet
+
+  } else {
+
+    $self->_irods->replace_object($file_path, $rods_path);
+
+    # Remove the old meta data
+    $self->_irods->remove_object_avu($rods_path, 'a', 'b', 'c'); # Again, unsure;
+
+    # Add the new stuff
+    $self->_irods->add_object_avu($rods_path, 'a', 'b', 'c' ); # Not sure what to put here yet
+  }
+
+  return 1;
+}
 
 sub read_content {
   my ($self, $path) = @_;
@@ -41,6 +82,16 @@ sub read_content {
 
   return \@array;
 };
+
+sub _build__irods {
+  my $self = shift;
+  return WTSI::NPG::iRODS->new();
+}
+
+sub _build__irods_path {
+  my $self = shift;
+  return $self->config->irods->{'path'};
+}
 
 1;
 
